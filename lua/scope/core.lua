@@ -5,6 +5,7 @@ local M = {}
 
 M.cache = {}
 M.buf_cache = {}
+M.last_buf = {}
 M.current_tab = 0
 M.last_tab = 0
 
@@ -22,6 +23,11 @@ function M.on_tab_enter()
     for _, k in pairs(buf_nums) do
       vim.api.nvim_buf_set_option(k, "buflisted", true)
     end
+    local buf = M.last_buf[M.current_tab]
+    if not buf then
+      buf = buf_nums[1]
+    end
+    vim.cmd("buf " .. buf)
   end
   if config.hooks.post_tab_enter ~= nil then
     config.hooks.post_tab_enter()
@@ -34,12 +40,16 @@ function M.on_buf_enter()
   end
   local buf = vim.api.nvim_get_current_buf()
   local buf_tab = M.buf_cache[buf]
-  if buf_tab and buf_tab ~= M.current_tab then
-    M.on_tab_leave()
-    M.buf_cache[buf] = buf_tab
-    vim.cmd("tabnext " .. buf_tab)
-    vim.cmd("buf " .. buf)
-    M.on_tab_enter()
+  if buf_tab then
+    if buf_tab ~= M.current_tab then
+      M.on_tab_leave()
+      M.buf_cache[buf] = buf_tab
+      vim.cmd("tabnext " .. buf_tab)
+      vim.cmd("buf " .. buf)
+      M.on_tab_enter()
+    else
+      M.last_buf[buf_tab] = buf
+    end
   end
   if config.hooks.post_buf_enter ~= nil then
     config.hooks.post_buf_enter()
